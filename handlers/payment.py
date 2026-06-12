@@ -163,12 +163,8 @@ async def pay_trc20(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "cancel_target": "plans",
     }
 
-    keyboard = [
-        [InlineKeyboardButton(t("btn_cancel", lang), callback_data="plans")],
-    ]
     await query.edit_message_text(
         t("trc20_instruction", lang, amount=f"{price:.2f}", address=TRON_WALLET_ADDRESS),
-        reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown",
     )
 
@@ -258,12 +254,8 @@ async def pay_erc20(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "cancel_target": "plans",
     }
 
-    keyboard = [
-        [InlineKeyboardButton(t("btn_cancel", lang), callback_data="plans")],
-    ]
     await query.edit_message_text(
         t("erc20_instruction", lang, amount=f"{price:.2f}", address=ETH_WALLET_ADDRESS),
-        reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown",
     )
 
