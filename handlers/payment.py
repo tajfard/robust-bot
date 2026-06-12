@@ -719,9 +719,13 @@ async def retry_crypto(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not pending:
         await query.edit_message_text(t("order_not_found", lang))
         return
-    await query.edit_message_text(
-        t("retry_hash_prompt", lang),
-        reply_markup=InlineKeyboardMarkup([]),
+    try:
+        await query.message.delete()
+    except Exception:
+        pass
+    await context.bot.send_message(
+        chat_id=query.message.chat_id,
+        text=t("retry_hash_prompt", lang),
     )
 
 
