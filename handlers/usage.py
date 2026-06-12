@@ -5,6 +5,7 @@ from telegram.ext import ContextTypes
 from database.db import get_db
 from database.models import Order, OrderStatus, Plan
 from services import mikrotik
+from telegram import CopyTextButton
 from utils.helpers import get_user_language
 from utils.i18n import t
 
@@ -95,20 +96,27 @@ async def show_account_usage(update: Update, context: ContextTypes.DEFAULT_TYPE)
             await query.edit_message_text(t("order_not_found", lang))
             return
         username = order.vpn_username
+        password = order.vpn_password or ""
         plan_name = order.plan.name
         bandwidth_gb = order.plan.bandwidth_gb
         expires = order.expires_at
 
     expires_str = expires.strftime("%Y-%m-%d") if expires else "?"
-    back_kb = InlineKeyboardMarkup([[
-        InlineKeyboardButton(t("btn_back", lang), callback_data="usage")
-    ]])
+    u_label = "📋 کپی نام کاربری" if lang == "fa" else "📋 Copy Username"
+    p_label = "📋 کپی رمز عبور" if lang == "fa" else "📋 Copy Password"
+    back_kb = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(u_label, copy_text=CopyTextButton(text=username)),
+            InlineKeyboardButton(p_label, copy_text=CopyTextButton(text=password)),
+        ],
+        [InlineKeyboardButton(t("btn_back", lang), callback_data="usage")],
+    ])
 
     try:
         stats = mikrotik.get_user_stats(username)
     except Exception:
         await query.edit_message_text(
-            t("usage_unavailable", lang, username=username, plan=plan_name, expires=expires_str),
+            t("usage_unavailable", lang, username=username, password=password, plan=plan_name, expires=expires_str),
             reply_markup=back_kb,
             parse_mode="Markdown",
         )
@@ -116,7 +124,7 @@ async def show_account_usage(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     if not stats.get("found"):
         await query.edit_message_text(
-            t("usage_unavailable", lang, username=username, plan=plan_name, expires=expires_str),
+            t("usage_unavailable", lang, username=username, password=password, plan=plan_name, expires=expires_str),
             reply_markup=back_kb,
             parse_mode="Markdown",
         )
@@ -136,6 +144,7 @@ async def show_account_usage(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await query.edit_message_text(
         t("account_usage", lang,
           username=username,
+          password=password,
           plan=plan_name,
           expires=expires_str,
           bytes_in=_fmt_bytes(bytes_in),
