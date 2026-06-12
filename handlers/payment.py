@@ -617,9 +617,13 @@ async def check_hash_again(update: Update, context: ContextTypes.DEFAULT_TYPE):
     last_hash = context.user_data.get("crypto_last_hash")
 
     if not pending or not last_hash:
-        await query.edit_message_text(
-            t("retry_hash_prompt", lang),
-            reply_markup=_crypto_retry_keyboard(lang, has_last_hash=False),
+        try:
+            await query.message.delete()
+        except Exception:
+            pass
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text=t("retry_hash_prompt", lang),
         )
         return
 
