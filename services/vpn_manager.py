@@ -14,6 +14,9 @@ class ActivatedOrder:
     vpn_username: str
     vpn_password: str
     expires_at: datetime
+    plan_name: str = ""
+    amount_paid: float = 0.0
+    telegram_id: int = 0
 
 
 def _generate_username() -> str:
@@ -49,6 +52,9 @@ def activate_order(order_id: int) -> ActivatedOrder:
                 vpn_username=order.vpn_username,
                 vpn_password=order.vpn_password,
                 expires_at=order.expires_at,
+                plan_name=order.plan.name,
+                amount_paid=order.amount_paid,
+                telegram_id=order.user.telegram_id,
             )
 
         tg_id = order.user.telegram_id
@@ -100,6 +106,9 @@ def activate_order(order_id: int) -> ActivatedOrder:
             vpn_username=username,
             vpn_password=password,
             expires_at=expires,
+            plan_name=order.plan.name,
+            amount_paid=order.amount_paid,
+            telegram_id=tg_id,
         )
 
 

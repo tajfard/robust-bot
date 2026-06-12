@@ -1,5 +1,6 @@
 """Admin panel — approve/reject payments, manage plans, stats."""
 from datetime import datetime
+from sqlalchemy import func
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler, CommandHandler, MessageHandler, filters
 
@@ -45,11 +46,29 @@ def require_admin(func):
 @require_admin
 async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
-        [InlineKeyboardButton("📊 Stats", callback_data="admin_stats")],
-        [InlineKeyboardButton("💸 Pending Payments", callback_data="admin_pending")],
+        [InlineKeyboardButton("📊 آمار", callback_data="admin_stats")],
+        [InlineKeyboardButton("💸 پرداخت‌های در انتظار", callback_data="admin_pending")],
     ]
     msg = update.message or update.callback_query.message
-    await msg.reply_text("🛠 *Admin Panel*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+    await msg.reply_text("🛠 *پنل ادمین*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+
+
+async def notify_admins_purchase(bot, activated, method: str):
+    """Send a new-purchase notification to all admins."""
+    text = (
+        f"🛒 *خرید جدید*\n\n"
+        f"👤 کاربر: `{activated.telegram_id}`\n"
+        f"📦 پلن: {activated.plan_name}\n"
+        f"💳 روش پرداخت: {method}\n"
+        f"💰 مبلغ: ${activated.amount_paid:.2f}\n"
+        f"🔐 نام کاربری: `{activated.vpn_username}`\n"
+        f"📅 انقضا: {activated.expires_at.strftime('%Y-%m-%d')}"
+    )
+    for admin_id in ADMIN_IDS:
+        try:
+            await bot.send_message(chat_id=admin_id, text=text, parse_mode="Markdown")
+        except Exception:
+            pass
 
 
 async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -58,23 +77,61 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(query.from_user.id):
         return
 
-    with get_db() as db:
-        import sqlalchemy
-        total_users = db.query(User).count()
-        active_orders = db.query(Order).filter(Order.status == OrderStatus.ACTIVE).count()
-        total_orders = db.query(Order).count()
-        revenue = db.query(Order).filter(
-            Order.status.in_([OrderStatus.ACTIVE, OrderStatus.EXPIRED])
-        ).with_entities(sqlalchemy.func.sum(Order.amount_paid)).scalar() or 0
+    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    paid_statuses = [OrderStatus.ACTIVE, OrderStatus.EXPIRED]
 
-    await query.edit_message_text(
-        f"📊 *Stats*\n\n"
-        f"👥 Users: {total_users}\n"
-        f"✅ Active orders: {active_orders}\n"
-        f"📦 Total orders: {total_orders}\n"
-        f"💰 Total revenue: ${revenue:.2f}",
-        parse_mode="Markdown",
+    with get_db() as db:
+        total_users    = db.query(User).count()
+        new_today      = db.query(User).filter(User.created_at >= today).count()
+
+        successful_q = (
+            db.query(Order)
+            .join(Order.plan)
+            .filter(Order.status.in_(paid_statuses), Plan.is_test == False)
+        )
+        total_successful  = successful_q.count()
+        today_successful  = successful_q.filter(Order.activated_at >= today).count()
+        active_now        = db.query(Order).filter(Order.status == OrderStatus.ACTIVE).count()
+        test_used         = (
+            db.query(Order)
+            .join(Order.plan)
+            .filter(Order.status.in_(paid_statuses), Plan.is_test == True)
+            .count()
+        )
+
+        revenue_total = successful_q.with_entities(
+            func.sum(Order.amount_paid)
+        ).scalar() or 0.0
+        revenue_today = (
+            db.query(func.sum(Order.amount_paid))
+            .join(Order.plan)
+            .filter(
+                Order.status.in_(paid_statuses),
+                Plan.is_test == False,
+                Order.activated_at >= today,
+            )
+            .scalar() or 0.0
+        )
+
+    text = (
+        f"📊 *آمار ربات*\n\n"
+        f"👥 *کاربران*\n"
+        f"  کل: {total_users}\n"
+        f"  امروز: +{new_today}\n\n"
+        f"📦 *سفارشات موفق*\n"
+        f"  کل: {total_successful}\n"
+        f"  امروز: +{today_successful}\n"
+        f"  فعال الان: {active_now}\n"
+        f"  اکانت تست: {test_used}\n\n"
+        f"💰 *درآمد*\n"
+        f"  کل: ${revenue_total:.2f}\n"
+        f"  امروز: ${revenue_today:.2f}"
     )
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔄 بروزرسانی", callback_data="admin_stats")],
+        [InlineKeyboardButton("💸 پرداخت‌های در انتظار", callback_data="admin_pending")],
+    ])
+    await query.edit_message_text(text, reply_markup=keyboard, parse_mode="Markdown")
 
 
 async def admin_pending_payments(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -209,6 +266,7 @@ async def _finalize_order_approval(update, context, tx_id: int, amount: float, r
         user_lang = tx.user.language or "fa"
 
     activated = activate_order(order_id)
+    await notify_admins_purchase(context.bot, activated, "Bank Transfer")
     await update.message.reply_text(
         f"✅ Order #{order_id} approved.\nAmount: ${amount:.2f} | Receipt: {receipt_number}"
     )
