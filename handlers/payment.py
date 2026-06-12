@@ -1,4 +1,5 @@
 """Payment flow handlers for all payment methods."""
+import re
 import time
 from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -91,12 +92,12 @@ async def pay_stripe(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def check_stripe(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
     lang = get_user_language(update.effective_user.id)
     order_id = int(query.data.split("_")[2])
 
     pending = context.bot_data.get("pending_stripe", {}).get(order_id)
     if not pending:
+        await query.answer()
         await query.edit_message_text(t("order_not_found", lang))
         return
 
@@ -104,6 +105,8 @@ async def check_stripe(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if session.payment_status != "paid":
         await query.answer(t("stripe_not_paid_yet", lang), show_alert=True)
         return
+
+    await query.answer()
 
     # Prevent double-activation
     with get_db() as db:
@@ -148,10 +151,17 @@ async def pay_trc20(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     renewal_info = context.user_data.pop("renewal_info", None)
     order_id, price, _ = _create_order(tg_user.id, plan_id, PaymentMethod.USDT_TRC20, renewal_info)
+    since_ms = int(time.time() * 1000)
     context.bot_data.setdefault("pending_trc20", {})[order_id] = {
-        "since_ms": int(time.time() * 1000),
+        "since_ms": since_ms,
         "amount": price,
         "telegram_id": tg_user.id,
+    }
+    context.user_data["crypto_pending"] = {
+        "method": "trc20",
+        "order_id": order_id,
+        "amount": price,
+        "since_ms": since_ms,
     }
 
     keyboard = [
@@ -240,10 +250,17 @@ async def pay_erc20(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     renewal_info = context.user_data.pop("renewal_info", None)
     order_id, price, _ = _create_order(tg_user.id, plan_id, PaymentMethod.USDT_ERC20, renewal_info)
+    since_ts = int(time.time())
     context.bot_data.setdefault("pending_erc20", {})[order_id] = {
-        "since": int(time.time()),
+        "since": since_ts,
         "amount": price,
         "telegram_id": tg_user.id,
+    }
+    context.user_data["crypto_pending"] = {
+        "method": "erc20",
+        "order_id": order_id,
+        "amount": price,
+        "since_ts": since_ts,
     }
 
     keyboard = [
@@ -337,10 +354,18 @@ async def pay_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
         plan = db.get(Plan, plan_id)
 
         if user.wallet_balance < plan.price_usd:
+            back_kb = InlineKeyboardMarkup([
+                [InlineKeyboardButton(t("btn_pay_stripe", lang), callback_data=f"pay_stripe_{plan_id}")],
+                [InlineKeyboardButton(t("btn_pay_trc20", lang),  callback_data=f"pay_trc20_{plan_id}")],
+                [InlineKeyboardButton(t("btn_pay_erc20", lang),  callback_data=f"pay_erc20_{plan_id}")],
+                [InlineKeyboardButton(t("btn_pay_bank", lang),   callback_data=f"pay_bank_{plan_id}")],
+                [InlineKeyboardButton(t("btn_back_to_plans", lang), callback_data="plans")],
+            ])
             await query.edit_message_text(
                 t("wallet_insufficient", lang,
                   required=fmt_usd(plan.price_usd, lang),
                   balance=fmt_usd(user.wallet_balance, lang)),
+                reply_markup=back_kb,
                 parse_mode="Markdown",
             )
             return
@@ -449,3 +474,90 @@ async def receive_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(t("receipt_received", lang))
     context.user_data.pop("bank_order_id", None)
     return ConversationHandler.END
+
+
+# ── Crypto hash submission ────────────────────────────────────────────────────
+
+def _extract_tx_hash(text: str, method: str) -> str | None:
+    text = text.strip()
+    if method == "trc20":
+        m = re.search(r'([0-9a-fA-F]{64})', text)
+        return m.group(1) if m else None
+    elif method == "erc20":
+        m = re.search(r'(0x[0-9a-fA-F]{64})', text, re.IGNORECASE)
+        return m.group(1).lower() if m else None
+    return None
+
+
+async def receive_crypto_hash(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle TX hash submitted as a text message during a crypto payment flow."""
+    lang = get_user_language(update.effective_user.id)
+    pending = context.user_data.get("crypto_pending")
+    if not pending:
+        return
+
+    method = pending["method"]
+    order_id = pending["order_id"]
+    amount = pending["amount"]
+
+    tx_hash = _extract_tx_hash(update.message.text or "", method)
+    if not tx_hash:
+        await update.message.reply_text(t("invalid_tx_hash", lang))
+        return
+
+    if crypto_svc.is_tx_hash_used(tx_hash):
+        await update.message.reply_text(t("tx_already_used", lang))
+        return
+
+    if method == "trc20":
+        result = crypto_svc.verify_trc20_tx(tx_hash, amount, pending.get("since_ms", 0))
+    else:
+        result = crypto_svc.verify_erc20_tx(tx_hash, amount, pending.get("since_ts", 0))
+
+    if not result:
+        await update.message.reply_text(t("tx_not_found", lang))
+        return
+
+    tx_hash, actual_amount = result
+    excess = round(actual_amount - amount, 6)
+
+    pm = PaymentMethod.USDT_TRC20 if method == "trc20" else PaymentMethod.USDT_ERC20
+    with get_db() as db:
+        order = db.get(Order, order_id)
+        if not order or order.status in (OrderStatus.ACTIVE, OrderStatus.EXPIRED):
+            await update.message.reply_text(t("order_not_found", lang))
+            return
+        order.status = OrderStatus.PAID
+        user_id = order.user_id
+        if excess > 0:
+            user = db.get(User, user_id)
+            user.wallet_balance += excess
+            new_balance = user.wallet_balance
+        else:
+            new_balance = None
+        db.add(Transaction(
+            user_id=user_id,
+            amount_usd=actual_amount,
+            method=pm,
+            status=TransactionStatus.CONFIRMED,
+            tx_hash=tx_hash,
+            order_id=order_id,
+            confirmed_at=datetime.utcnow(),
+        ))
+
+    context.user_data.pop("crypto_pending", None)
+    activated = activate_order(order_id)
+
+    msg = t("payment_confirmed", lang,
+            username=activated.vpn_username,
+            password=activated.vpn_password,
+            expires=activated.expires_at.strftime("%Y-%m-%d"),
+            txhash=tx_hash)
+    if excess > 0:
+        msg += "\n\n" + t("overpayment_credited", lang,
+                           excess=fmt_usd(excess, lang), balance=fmt_usd(new_balance, lang))
+    await update.message.reply_text(
+        msg,
+        reply_markup=credentials_keyboard(activated.vpn_username, activated.vpn_password, lang),
+        parse_mode="Markdown",
+    )

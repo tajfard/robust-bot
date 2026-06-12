@@ -7,10 +7,13 @@ from telegram.ext import ContextTypes, ConversationHandler, MessageHandler, filt
 from database.db import get_db
 from database.models import User, Transaction, TransactionStatus, PaymentMethod
 from services import crypto as crypto_svc
+from services import stripe_service
 from services.plans import fmt_usd
 from utils.helpers import get_user_language
 from utils.i18n import t
 from config import TRON_WALLET_ADDRESS, ETH_WALLET_ADDRESS, BANK_CARD_NUMBER, BANK_ACCOUNT_NAME, BANK_NAME, ADMIN_IDS
+
+_TOPUP_AMOUNTS = [5, 10, 20, 50]
 
 WAITING_TOPUP_AMOUNT = 10   # kept for bot.py import compatibility
 WAITING_TOPUP_RECEIPT = 11
@@ -27,6 +30,7 @@ async def wallet_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         balance = user.wallet_balance if user else 0.0
 
     keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(t("btn_topup_stripe", lang), callback_data="topup_stripe")],
         [InlineKeyboardButton(t("btn_topup_trc20", lang), callback_data="topup_trc20")],
         [InlineKeyboardButton(t("btn_topup_erc20", lang), callback_data="topup_erc20")],
         [InlineKeyboardButton(t("btn_topup_bank", lang), callback_data="topup_bank")],
@@ -219,3 +223,90 @@ async def topup_bank_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     await update.message.reply_text(t("wallet_topup_pending", lang))
     return ConversationHandler.END
+
+
+# ── Stripe wallet top-up ──────────────────────────────────────────────────────
+
+async def topup_stripe_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    lang = get_user_language(update.effective_user.id)
+    keyboard = InlineKeyboardMarkup(
+        [[InlineKeyboardButton(f"${a}", callback_data=f"topup_stripe_amount_{a}")]
+         for a in _TOPUP_AMOUNTS] +
+        [[InlineKeyboardButton(t("btn_back", lang), callback_data="wallet")]]
+    )
+    await query.edit_message_text(
+        t("topup_stripe_select_amount", lang),
+        reply_markup=keyboard,
+        parse_mode="Markdown",
+    )
+
+
+async def topup_stripe_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    lang = get_user_language(update.effective_user.id)
+    tg_user = update.effective_user
+    amount = int(query.data.split("_")[-1])
+
+    session_id, url = stripe_service.create_payment_link(
+        amount, 0, f"Wallet Top-up ${amount}"
+    )
+    context.bot_data.setdefault("pending_topup_stripe", {})[tg_user.id] = {
+        "session_id": session_id,
+        "amount": amount,
+    }
+
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(t("btn_pay_now", lang), url=url)],
+        [InlineKeyboardButton(t("btn_stripe_check", lang), callback_data="check_topup_stripe")],
+        [InlineKeyboardButton(t("btn_back", lang), callback_data="wallet")],
+    ])
+    await query.edit_message_text(
+        t("topup_stripe_instruction", lang, amount=amount),
+        reply_markup=keyboard,
+        parse_mode="Markdown",
+    )
+
+
+async def topup_stripe_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    lang = get_user_language(update.effective_user.id)
+    tg_user = update.effective_user
+
+    pending = context.bot_data.get("pending_topup_stripe", {}).get(tg_user.id)
+    if not pending:
+        await query.answer()
+        await query.edit_message_text(t("order_not_found", lang))
+        return
+
+    session = stripe_service.retrieve_session(pending["session_id"])
+    if session.payment_status != "paid":
+        await query.answer(t("stripe_not_paid_yet", lang), show_alert=True)
+        return
+
+    await query.answer()
+    amount = pending["amount"]
+
+    with get_db() as db:
+        user = db.query(User).filter(User.telegram_id == tg_user.id).first()
+        user.wallet_balance += amount
+        new_balance = user.wallet_balance
+        db.add(Transaction(
+            user_id=user.id,
+            amount_usd=amount,
+            method=PaymentMethod.STRIPE,
+            status=TransactionStatus.CONFIRMED,
+            tx_hash=pending["session_id"],
+            confirmed_at=datetime.utcnow(),
+        ))
+
+    context.bot_data.get("pending_topup_stripe", {}).pop(tg_user.id, None)
+    await query.edit_message_text(
+        t("wallet_topped_up", lang,
+          amount=fmt_usd(amount, lang),
+          balance=fmt_usd(new_balance, lang),
+          txhash=pending["session_id"]),
+        parse_mode="Markdown",
+    )

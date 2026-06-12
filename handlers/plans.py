@@ -69,10 +69,10 @@ async def plan_detail(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         text = t("plan_detail_paid", lang, bw=bw, dur=dur, price=price, conn=conn)
         keyboard = [
+            [InlineKeyboardButton(t("btn_pay_wallet", lang), callback_data=f"pay_wallet_{plan_id}")],
             [InlineKeyboardButton(t("btn_pay_stripe", lang), callback_data=f"pay_stripe_{plan_id}")],
             [InlineKeyboardButton(t("btn_pay_trc20", lang),  callback_data=f"pay_trc20_{plan_id}")],
             [InlineKeyboardButton(t("btn_pay_erc20", lang),  callback_data=f"pay_erc20_{plan_id}")],
-            [InlineKeyboardButton(t("btn_pay_wallet", lang), callback_data=f"pay_wallet_{plan_id}")],
             [InlineKeyboardButton(t("btn_pay_bank", lang),   callback_data=f"pay_bank_{plan_id}")],
             [back],
         ]

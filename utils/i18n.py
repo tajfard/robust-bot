@@ -146,15 +146,17 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "🪙 *پرداخت USDT TRC20*\n\n"
             "دقیقاً *{amount} USDT* (شبکه TRC20) به آدرس زیر ارسال کنید:\n\n"
             "`{address}`\n\n"
-            "⚠️ فقط از شبکه *ترون (TRC20)* ارسال کنید.\n"
-            "پس از ارسال، دکمه بررسی را بزنید."
+            "⚠️ فقط از شبکه *ترون (TRC20)* ارسال کنید.\n\n"
+            "پس از ارسال، *هش تراکنش (TX Hash)* خود را اینجا ارسال کنید.\n"
+            "یا از دکمه زیر برای بررسی خودکار استفاده کنید."
         ),
         "en": (
             "🪙 *USDT TRC20 Payment*\n\n"
             "Send exactly *{amount} USDT* (TRC20 network) to:\n\n"
             "`{address}`\n\n"
-            "⚠️ Only send USDT on the *Tron (TRC20)* network.\n"
-            "After sending, tap the check button."
+            "⚠️ Only send USDT on the *Tron (TRC20)* network.\n\n"
+            "After sending, paste your *TX Hash* here in the chat.\n"
+            "Or tap the button below for automatic detection."
         ),
     },
     "btn_sent_check": {"fa": "✅ ارسال کردم — بررسی", "en": "✅ I've Sent — Check"},
@@ -167,16 +169,18 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "دقیقاً *{amount} USDT* (شبکه اتریوم ERC20) به آدرس زیر ارسال کنید:\n\n"
             "`{address}`\n\n"
             "⚠️ فقط از شبکه *اتریوم (ERC20)* ارسال کنید.\n"
-            "کارمزد گس به عهده شماست.\n"
-            "پس از ارسال، دکمه بررسی را بزنید."
+            "کارمزد گس به عهده شماست.\n\n"
+            "پس از ارسال، *هش تراکنش (TX Hash)* خود را اینجا ارسال کنید.\n"
+            "یا از دکمه زیر برای بررسی خودکار استفاده کنید."
         ),
         "en": (
             "🦊 *USDT ERC20 Payment*\n\n"
             "Send exactly *{amount} USDT* (Ethereum ERC20) to:\n\n"
             "`{address}`\n\n"
             "⚠️ Only send USDT on the *Ethereum (ERC20)* network.\n"
-            "Gas fees are your responsibility.\n"
-            "After sending, tap the check button."
+            "Gas fees are your responsibility.\n\n"
+            "After sending, paste your *TX Hash* here in the chat.\n"
+            "Or tap the button below for automatic detection."
         ),
     },
 
@@ -255,6 +259,10 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "📅 Expires: {expires}"
         ),
     },
+    "invalid_tx_hash": {
+        "fa": "❌ هش تراکنش نامعتبر است. لطفاً TX Hash را از کیف پول یا اکسپلورر کپی کرده و ارسال کنید.",
+        "en": "❌ Invalid TX hash. Please copy the TX Hash from your wallet or blockchain explorer and send it here.",
+    },
     "tx_not_found": {
         "fa": "تراکنشی پیدا نشد. چند دقیقه صبر کرده دوباره امتحان کنید.",
         "en": "No matching transaction found yet. Try again in a minute.",
@@ -281,6 +289,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "fa": "👛 *کیف پول شما*\n\nموجودی: *{balance}*\n\nروش شارژ را انتخاب کنید:",
         "en": "👛 *Your Wallet*\n\nBalance: *{balance}*\n\nChoose top-up method:",
     },
+    "btn_topup_stripe": {"fa": "💳 شارژ با کارت (Stripe)", "en": "💳 Top-up via Card (Stripe)"},
     "btn_topup_trc20": {"fa": "🪙 شارژ با USDT TRC20", "en": "🪙 Top-up via USDT TRC20"},
     "btn_topup_erc20": {"fa": "🦊 شارژ با USDT ERC20", "en": "🦊 Top-up via USDT ERC20"},
     "btn_topup_bank": {"fa": "🏦 شارژ با انتقال بانکی", "en": "🏦 Top-up via Bank Transfer"},
@@ -291,6 +300,14 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "invalid_amount": {
         "fa": "مبلغ نامعتبر است. یک عدد مثبت مثل `20` وارد کنید.",
         "en": "Invalid amount. Please enter a positive number like `20`.",
+    },
+    "topup_stripe_select_amount": {
+        "fa": "💳 *شارژ کیف پول با Stripe*\n\nمبلغ مورد نظر را انتخاب کنید:",
+        "en": "💳 *Stripe Wallet Top-up*\n\nSelect an amount to add to your wallet:",
+    },
+    "topup_stripe_instruction": {
+        "fa": "💳 *شارژ کیف پول با Stripe*\n\nمبلغ: *${amount}*\n\nروی دکمه زیر کلیک کرده پرداخت را تکمیل کنید.",
+        "en": "💳 *Stripe Wallet Top-up*\n\nAmount: *${amount}*\n\nClick below to complete payment.",
     },
     "wallet_topup_trc20": {
         "fa": (
