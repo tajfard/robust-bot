@@ -22,7 +22,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "btn_orders": {"fa": "💼 سفارش‌های من", "en": "💼 My Orders"},
     "btn_renew": {"fa": "🔄 تمدید اکانت", "en": "🔄 Renew Account"},
     "btn_wallet": {"fa": "👛 کیف پول من", "en": "👛 My Wallet"},
-    "btn_usage": {"fa": "📊 مشاهده مانده اکانت", "en": "📊 Account Usage"},
+    "btn_usage": {"fa": "📋 اطلاعات اکانت", "en": "📋 Account Info"},
     "btn_help": {"fa": "❓ راهنما", "en": "❓ Help"},
     "btn_language": {"fa": "🌐 تغییر زبان", "en": "🌐 Change Language"},
     "btn_support": {"fa": "📞 پشتیبانی", "en": "📞 Support"},
@@ -436,8 +436,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
 
     # ── Account usage ─────────────────────────────────────────────────────────
     "usage_title": {
-        "fa": "📊 *مشاهده مانده اکانت*\n\nکدام اکانت را می‌خواهید بررسی کنید؟",
-        "en": "📊 *Account Usage*\n\nWhich account would you like to check?",
+        "fa": "📋 *اطلاعات اکانت*\n\nکدام اکانت را می‌خواهید مشاهده کنید؟",
+        "en": "📋 *Account Info*\n\nWhich account would you like to view?",
     },
     "no_active_accounts": {
         "fa": "⚠️ هیچ اکانت فعالی ندارید.",
@@ -445,8 +445,9 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     },
     "account_usage": {
         "fa": (
-            "📊 *مانده اکانت*\n\n"
+            "📋 *اطلاعات اکانت*\n\n"
             "👤 نام کاربری: `{username}`\n"
+            "🔑 رمز عبور: `{password}`\n"
             "📦 پلن: {plan}\n"
             "📅 انقضا: {expires}\n\n"
             "📶 *مصرف اینترنت:*\n"
@@ -456,8 +457,9 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "💾 مانده: {remaining}"
         ),
         "en": (
-            "📊 *Account Usage*\n\n"
+            "📋 *Account Info*\n\n"
             "👤 Username: `{username}`\n"
+            "🔑 Password: `{password}`\n"
             "📦 Plan: {plan}\n"
             "📅 Expires: {expires}\n\n"
             "📶 *Data Usage:*\n"
@@ -469,15 +471,17 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     },
     "usage_unavailable": {
         "fa": (
-            "📊 *مانده اکانت*\n\n"
+            "📋 *اطلاعات اکانت*\n\n"
             "👤 نام کاربری: `{username}`\n"
+            "🔑 رمز عبور: `{password}`\n"
             "📦 پلن: {plan}\n"
             "📅 انقضا: {expires}\n\n"
             "⚠️ اطلاعات مصرف در دسترس نیست."
         ),
         "en": (
-            "📊 *Account Usage*\n\n"
+            "📋 *Account Info*\n\n"
             "👤 Username: `{username}`\n"
+            "🔑 Password: `{password}`\n"
             "📦 Plan: {plan}\n"
             "📅 Expires: {expires}\n\n"
             "⚠️ Usage data is currently unavailable."
