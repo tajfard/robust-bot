@@ -50,12 +50,14 @@ async def topup_trc20_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     lang = get_user_language(update.effective_user.id)
-    # Record when the user opened this screen — used as the "since" window
-    context.user_data["topup_trc20_since_ms"] = int(time.time() * 1000)
-
+    context.user_data["crypto_pending"] = {
+        "mode": "topup",
+        "method": "trc20",
+        "since_ms": int(time.time() * 1000),
+        "cancel_target": "wallet",
+    }
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton(t("btn_sent_check", lang), callback_data="topup_check_trc20")],
-        [InlineKeyboardButton(t("btn_back", lang), callback_data="wallet")],
+        [InlineKeyboardButton(t("btn_cancel", lang), callback_data="cancel_crypto")],
     ])
     await query.edit_message_text(
         t("wallet_topup_trc20", lang, address=TRON_WALLET_ADDRESS),
@@ -68,11 +70,14 @@ async def topup_erc20_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     lang = get_user_language(update.effective_user.id)
-    context.user_data["topup_erc20_since"] = int(time.time())
-
+    context.user_data["crypto_pending"] = {
+        "mode": "topup",
+        "method": "erc20",
+        "since_ts": int(time.time()),
+        "cancel_target": "wallet",
+    }
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton(t("btn_sent_check", lang), callback_data="topup_check_erc20")],
-        [InlineKeyboardButton(t("btn_back", lang), callback_data="wallet")],
+        [InlineKeyboardButton(t("btn_cancel", lang), callback_data="cancel_crypto")],
     ])
     await query.edit_message_text(
         t("wallet_topup_erc20", lang, address=ETH_WALLET_ADDRESS),

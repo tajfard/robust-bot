@@ -259,9 +259,10 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "fa": "❌ هش تراکنش نامعتبر است. لطفاً TX Hash را از کیف پول یا اکسپلورر کپی کرده و ارسال کنید.",
         "en": "❌ Invalid TX hash. Please copy the TX Hash from your wallet or blockchain explorer and send it here.",
     },
-    "btn_retry_hash": {"fa": "🔄 دوباره امتحان کن", "en": "🔄 Try Again"},
+    "btn_check_again": {"fa": "🔄 همین هش را دوباره بررسی کن", "en": "🔄 Check This Hash Again"},
+    "btn_enter_new_hash": {"fa": "✏️ هش جدید وارد کن", "en": "✏️ Enter New Hash"},
     "retry_hash_prompt": {
-        "fa": "لطفاً TX Hash تراکنش خود را ارسال کنید:",
+        "fa": "لطفاً TX Hash تراکنش خود را اینجا ارسال کنید:",
         "en": "Please paste your TX Hash here:",
     },
     "tx_not_found": {
@@ -315,15 +316,15 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "🪙 *شارژ کیف پول با USDT TRC20*\n\n"
             "هر مقداری USDT (شبکه TRC20) به آدرس زیر ارسال کنید:\n\n"
             "`{address}`\n\n"
-            "⚠️ فقط از شبکه *ترون (TRC20)* ارسال کنید.\n"
-            "پس از ارسال، دکمه بررسی را بزنید."
+            "⚠️ فقط از شبکه *ترون (TRC20)* ارسال کنید.\n\n"
+            "پس از ارسال، *هش تراکنش (TX Hash)* خود را اینجا ارسال کنید."
         ),
         "en": (
             "🪙 *USDT TRC20 Wallet Top-up*\n\n"
             "Send any amount of USDT (TRC20 network) to:\n\n"
             "`{address}`\n\n"
-            "⚠️ Only send USDT on the *Tron (TRC20)* network.\n"
-            "After sending, tap the check button."
+            "⚠️ Only send USDT on the *Tron (TRC20)* network.\n\n"
+            "After sending, paste your *TX Hash* here in the chat."
         ),
     },
     "wallet_topup_erc20": {
@@ -331,15 +332,15 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "🦊 *شارژ کیف پول با USDT ERC20*\n\n"
             "هر مقداری USDT (شبکه اتریوم ERC20) به آدرس زیر ارسال کنید:\n\n"
             "`{address}`\n\n"
-            "⚠️ فقط از شبکه *اتریوم (ERC20)* ارسال کنید.\n"
-            "پس از ارسال، دکمه بررسی را بزنید."
+            "⚠️ فقط از شبکه *اتریوم (ERC20)* ارسال کنید.\n\n"
+            "پس از ارسال، *هش تراکنش (TX Hash)* خود را اینجا ارسال کنید."
         ),
         "en": (
             "🦊 *USDT ERC20 Wallet Top-up*\n\n"
             "Send any amount of USDT (Ethereum ERC20 network) to:\n\n"
             "`{address}`\n\n"
-            "⚠️ Only send USDT on the *Ethereum (ERC20)* network.\n"
-            "After sending, tap the check button."
+            "⚠️ Only send USDT on the *Ethereum (ERC20)* network.\n\n"
+            "After sending, paste your *TX Hash* here in the chat."
         ),
     },
     "wallet_topup_bank": {
