@@ -17,6 +17,7 @@ from config import (
     BANK_CARD_NUMBER, BANK_ACCOUNT_NAME, BANK_NAME,
     ADMIN_IDS,
 )
+from handlers.admin import notify_admins_purchase
 
 WAITING_RECEIPT = 1
 
@@ -128,6 +129,7 @@ async def check_stripe(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     context.bot_data.get("pending_stripe", {}).pop(order_id, None)
     activated = activate_order(order_id)
+    await notify_admins_purchase(context.bot, activated, "Stripe")
 
     await query.edit_message_text(
         t("payment_confirmed", lang,
@@ -377,6 +379,7 @@ async def pay_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
         order_id = order.id
 
     activated = activate_order(order_id)
+    await notify_admins_purchase(context.bot, activated, "Wallet")
     await query.edit_message_text(
         t("wallet_activated", lang,
           username=activated.vpn_username,
@@ -588,6 +591,8 @@ async def receive_crypto_hash(update: Update, context: ContextTypes.DEFAULT_TYPE
         ))
 
     activated = activate_order(order_id)
+    method_label = "USDT TRC20" if method == "trc20" else "USDT ERC20"
+    await notify_admins_purchase(context.bot, activated, method_label)
     msg = t("payment_confirmed", lang,
             username=activated.vpn_username,
             password=activated.vpn_password,
@@ -688,6 +693,8 @@ async def check_hash_again(update: Update, context: ContextTypes.DEFAULT_TYPE):
             confirmed_at=datetime.utcnow(),
         ))
     activated = activate_order(order_id)
+    method_label = "USDT TRC20" if method == "trc20" else "USDT ERC20"
+    await notify_admins_purchase(context.bot, activated, method_label)
     msg = t("payment_confirmed", lang,
             username=activated.vpn_username,
             password=activated.vpn_password,
@@ -712,11 +719,7 @@ async def retry_crypto(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not pending:
         await query.edit_message_text(t("order_not_found", lang))
         return
-    last_hash = context.user_data.get("crypto_last_hash")
-    await query.edit_message_text(
-        t("retry_hash_prompt", lang),
-        reply_markup=_crypto_retry_keyboard(lang, has_last_hash=bool(last_hash)),
-    )
+    await query.edit_message_text(t("retry_hash_prompt", lang))
 
 
 async def cancel_crypto(update: Update, context: ContextTypes.DEFAULT_TYPE):
