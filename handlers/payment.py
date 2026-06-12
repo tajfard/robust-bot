@@ -10,7 +10,7 @@ from database.models import Order, OrderStatus, Transaction, TransactionStatus, 
 from services import stripe_service, crypto as crypto_svc
 from services.plans import fmt_usd
 from services.vpn_manager import activate_order
-from utils.helpers import get_or_create_user, get_user_language, credentials_keyboard
+from utils.helpers import get_or_create_user, get_user_language, credentials_keyboard, send_vpn_config
 from utils.i18n import t
 from config import (
     TRON_WALLET_ADDRESS, ETH_WALLET_ADDRESS,
@@ -140,6 +140,7 @@ async def check_stripe(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=credentials_keyboard(activated.vpn_username, activated.vpn_password, lang),
         parse_mode="Markdown",
     )
+    await send_vpn_config(context.bot, update.effective_user.id)
 
 
 # ── TRC20 ─────────────────────────────────────────────────────────────────────
@@ -380,6 +381,7 @@ async def pay_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=credentials_keyboard(activated.vpn_username, activated.vpn_password, lang),
         parse_mode="Markdown",
     )
+    await send_vpn_config(context.bot, update.effective_user.id)
 
 
 # ── Bank Transfer ─────────────────────────────────────────────────────────────
@@ -498,20 +500,33 @@ async def receive_crypto_hash(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     last_hash = context.user_data.get("crypto_last_hash")
 
+    async def _send_error(text: str, kb: InlineKeyboardMarkup):
+        """Delete previous error message (if any) then send new one."""
+        prev_id = context.user_data.pop("crypto_error_msg_id", None)
+        if prev_id:
+            try:
+                await context.bot.delete_message(
+                    chat_id=update.message.chat_id, message_id=prev_id
+                )
+            except Exception:
+                pass
+        sent = await update.message.reply_text(text, reply_markup=kb)
+        context.user_data["crypto_error_msg_id"] = sent.message_id
+
     tx_hash = _extract_tx_hash(update.message.text or "", method)
     if not tx_hash:
-        await update.message.reply_text(
+        await _send_error(
             t("invalid_tx_hash", lang),
-            reply_markup=_crypto_retry_keyboard(lang, has_last_hash=bool(last_hash)),
+            _crypto_retry_keyboard(lang, has_last_hash=bool(last_hash)),
         )
         return
 
     context.user_data["crypto_last_hash"] = tx_hash
 
     if crypto_svc.is_tx_hash_used(tx_hash):
-        await update.message.reply_text(
+        await _send_error(
             t("tx_already_used", lang),
-            reply_markup=_crypto_retry_keyboard(lang, has_last_hash=True),
+            _crypto_retry_keyboard(lang, has_last_hash=True),
         )
         return
 
@@ -522,15 +537,16 @@ async def receive_crypto_hash(update: Update, context: ContextTypes.DEFAULT_TYPE
         result = crypto_svc.verify_erc20_tx(tx_hash, min_amount, pending.get("since_ts", 0))
 
     if not result:
-        await update.message.reply_text(
+        await _send_error(
             t("tx_not_found", lang),
-            reply_markup=_crypto_retry_keyboard(lang, has_last_hash=True),
+            _crypto_retry_keyboard(lang, has_last_hash=True),
         )
         return
 
     tx_hash, actual_amount = result
     context.user_data.pop("crypto_pending", None)
     context.user_data.pop("crypto_last_hash", None)
+    context.user_data.pop("crypto_error_msg_id", None)
 
     if mode == "topup":
         with get_db() as db:
@@ -598,6 +614,7 @@ async def receive_crypto_hash(update: Update, context: ContextTypes.DEFAULT_TYPE
         reply_markup=credentials_keyboard(activated.vpn_username, activated.vpn_password, lang),
         parse_mode="Markdown",
     )
+    await send_vpn_config(context.bot, update.effective_user.id)
 
 
 async def check_hash_again(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -704,6 +721,7 @@ async def check_hash_again(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=credentials_keyboard(activated.vpn_username, activated.vpn_password, lang),
         parse_mode="Markdown",
     )
+    await send_vpn_config(context.bot, query.message.chat_id)
 
 
 async def retry_crypto(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -715,6 +733,7 @@ async def retry_crypto(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not pending:
         await query.edit_message_text(t("order_not_found", lang))
         return
+    context.user_data.pop("crypto_error_msg_id", None)
     try:
         await query.message.delete()
     except Exception:
@@ -731,6 +750,7 @@ async def cancel_crypto(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     pending = context.user_data.pop("crypto_pending", None)
     context.user_data.pop("crypto_last_hash", None)
+    context.user_data.pop("crypto_error_msg_id", None)
     cancel_target = (pending or {}).get("cancel_target", "plans")
     if cancel_target == "wallet":
         from handlers.wallet import wallet_menu

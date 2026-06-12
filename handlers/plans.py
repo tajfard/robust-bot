@@ -5,7 +5,7 @@ from database.db import get_db
 from database.models import Plan, Order, OrderStatus
 from services.plans import fmt_plan_button, fmt_bandwidth, fmt_duration, fmt_price, has_used_test_plan
 from services.vpn_manager import activate_order
-from utils.helpers import get_or_create_user, get_user_language, format_order_info, credentials_keyboard
+from utils.helpers import get_or_create_user, get_user_language, format_order_info, credentials_keyboard, send_vpn_config
 from utils.i18n import t
 
 
@@ -143,6 +143,7 @@ async def activate_test_plan(update: Update, context: ContextTypes.DEFAULT_TYPE)
         reply_markup=credentials_keyboard(activated.vpn_username, activated.vpn_password, lang),
         parse_mode="Markdown",
     )
+    await send_vpn_config(context.bot, tg_user.id)
 
 
 async def my_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):

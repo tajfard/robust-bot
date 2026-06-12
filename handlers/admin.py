@@ -11,7 +11,7 @@ from database.models import (
 )
 from services.vpn_manager import activate_order
 from services.plans import fmt_usd
-from utils.helpers import get_user_language, credentials_keyboard
+from utils.helpers import get_user_language, credentials_keyboard, send_vpn_config
 from utils.i18n import t
 from config import ADMIN_IDS
 
@@ -279,6 +279,7 @@ async def _finalize_order_approval(update, context, tx_id: int, amount: float, r
         reply_markup=credentials_keyboard(activated.vpn_username, activated.vpn_password, user_lang),
         parse_mode="Markdown",
     )
+    await send_vpn_config(context.bot, user_tg_id)
 
 
 async def _finalize_topup_approval(update, context, tx_id: int, amount: float, receipt_number: str):
