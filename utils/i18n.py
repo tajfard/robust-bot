@@ -147,16 +147,14 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "دقیقاً *{amount} USDT* (شبکه TRC20) به آدرس زیر ارسال کنید:\n\n"
             "`{address}`\n\n"
             "⚠️ فقط از شبکه *ترون (TRC20)* ارسال کنید.\n\n"
-            "پس از ارسال، *هش تراکنش (TX Hash)* خود را اینجا ارسال کنید.\n"
-            "یا از دکمه زیر برای بررسی خودکار استفاده کنید."
+            "پس از ارسال، *هش تراکنش (TX Hash)* خود را اینجا ارسال کنید."
         ),
         "en": (
             "🪙 *USDT TRC20 Payment*\n\n"
             "Send exactly *{amount} USDT* (TRC20 network) to:\n\n"
             "`{address}`\n\n"
             "⚠️ Only send USDT on the *Tron (TRC20)* network.\n\n"
-            "After sending, paste your *TX Hash* here in the chat.\n"
-            "Or tap the button below for automatic detection."
+            "After sending, paste your *TX Hash* here in the chat."
         ),
     },
     "btn_sent_check": {"fa": "✅ ارسال کردم — بررسی", "en": "✅ I've Sent — Check"},
@@ -170,8 +168,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "`{address}`\n\n"
             "⚠️ فقط از شبکه *اتریوم (ERC20)* ارسال کنید.\n"
             "کارمزد گس به عهده شماست.\n\n"
-            "پس از ارسال، *هش تراکنش (TX Hash)* خود را اینجا ارسال کنید.\n"
-            "یا از دکمه زیر برای بررسی خودکار استفاده کنید."
+            "پس از ارسال، *هش تراکنش (TX Hash)* خود را اینجا ارسال کنید."
         ),
         "en": (
             "🦊 *USDT ERC20 Payment*\n\n"
@@ -179,8 +176,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "`{address}`\n\n"
             "⚠️ Only send USDT on the *Ethereum (ERC20)* network.\n"
             "Gas fees are your responsibility.\n\n"
-            "After sending, paste your *TX Hash* here in the chat.\n"
-            "Or tap the button below for automatic detection."
+            "After sending, paste your *TX Hash* here in the chat."
         ),
     },
 
@@ -262,6 +258,11 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "invalid_tx_hash": {
         "fa": "❌ هش تراکنش نامعتبر است. لطفاً TX Hash را از کیف پول یا اکسپلورر کپی کرده و ارسال کنید.",
         "en": "❌ Invalid TX hash. Please copy the TX Hash from your wallet or blockchain explorer and send it here.",
+    },
+    "btn_retry_hash": {"fa": "🔄 دوباره امتحان کن", "en": "🔄 Try Again"},
+    "retry_hash_prompt": {
+        "fa": "لطفاً TX Hash تراکنش خود را ارسال کنید:",
+        "en": "Please paste your TX Hash here:",
     },
     "tx_not_found": {
         "fa": "تراکنشی پیدا نشد. چند دقیقه صبر کرده دوباره امتحان کنید.",

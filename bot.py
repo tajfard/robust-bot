@@ -17,7 +17,7 @@ from handlers.payment import (
     pay_trc20, check_trc20,
     pay_erc20, check_erc20,
     pay_wallet, pay_bank, receive_receipt,
-    receive_crypto_hash,
+    receive_crypto_hash, retry_crypto, cancel_crypto,
 )
 from handlers.wallet import (
     wallet_menu,
@@ -119,6 +119,10 @@ async def main_callback(update: Update, context):
         await check_erc20(update, context)
     elif data.startswith("get_test_"):
         await activate_test_plan(update, context)
+    elif data == "retry_crypto":
+        await retry_crypto(update, context)
+    elif data == "cancel_crypto":
+        await cancel_crypto(update, context)
     elif data.startswith("pay_wallet_"):
         await pay_wallet(update, context)
     elif data.startswith("pay_bank_"):
