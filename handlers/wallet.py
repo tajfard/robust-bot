@@ -56,12 +56,8 @@ async def topup_trc20_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "since_ms": int(time.time() * 1000),
         "cancel_target": "wallet",
     }
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton(t("btn_cancel", lang), callback_data="cancel_crypto")],
-    ])
     await query.edit_message_text(
         t("wallet_topup_trc20", lang, address=TRON_WALLET_ADDRESS),
-        reply_markup=keyboard,
         parse_mode="Markdown",
     )
 
@@ -76,9 +72,6 @@ async def topup_erc20_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "since_ts": int(time.time()),
         "cancel_target": "wallet",
     }
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton(t("btn_cancel", lang), callback_data="cancel_crypto")],
-    ])
     await query.edit_message_text(
         t("wallet_topup_erc20", lang, address=ETH_WALLET_ADDRESS),
         reply_markup=keyboard,
