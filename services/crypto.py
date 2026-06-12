@@ -93,6 +93,8 @@ def verify_trc20_tx(tx_hash: str, min_amount_usdt: float, since_ms: int) -> tupl
     threshold = int(min_amount_usdt * 1_000_000)
     for tx in data:
         if tx.get("transaction_id") == tx_hash:
+            if tx.get("to", "").lower() != TRON_WALLET_ADDRESS.lower():
+                return None  # transaction goes to a different address
             value = int(tx.get("value", 0))
             if value >= threshold:
                 return tx_hash, value / 1_000_000
