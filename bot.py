@@ -17,11 +17,13 @@ from handlers.payment import (
     pay_trc20, check_trc20,
     pay_erc20, check_erc20,
     pay_wallet, pay_bank, receive_receipt,
+    receive_crypto_hash,
 )
 from handlers.wallet import (
     wallet_menu,
     topup_trc20_start, topup_erc20_start, topup_bank_start,
     topup_check_trc20, topup_check_erc20, topup_bank_receipt,
+    topup_stripe_start, topup_stripe_amount, topup_stripe_check,
     WAITING_TOPUP_RECEIPT,
 )
 from handlers.admin import (
@@ -121,6 +123,12 @@ async def main_callback(update: Update, context):
         await pay_wallet(update, context)
     elif data.startswith("pay_bank_"):
         await _start_bank_conv(update, context)
+    elif data == "topup_stripe":
+        await topup_stripe_start(update, context)
+    elif data.startswith("topup_stripe_amount_"):
+        await topup_stripe_amount(update, context)
+    elif data == "check_topup_stripe":
+        await topup_stripe_check(update, context)
     elif data == "topup_trc20":
         await topup_trc20_start(update, context)
     elif data == "topup_erc20":
@@ -192,6 +200,11 @@ async def _start_admin_approve(update: Update, context, kind: str):
 async def text_router(update: Update, context):
     uid = update.effective_user.id
 
+    # Crypto TX hash submission
+    if context.user_data.get("crypto_pending"):
+        await receive_crypto_hash(update, context)
+        return
+
     # Admin approval conversation takes priority for admin users
     if uid in _pending_approvals and _pending_approvals[uid]:
         state = _pending_approvals[uid].get("state")
@@ -217,6 +230,15 @@ async def receipt_router(update: Update, context):
         _topup_conv_active.pop(uid, None)
 
 
+async def error_handler(update: object, context) -> None:
+    logger.error("Unhandled exception", exc_info=context.error)
+    if isinstance(update, Update) and update.callback_query:
+        try:
+            await update.callback_query.answer("⚠️ خطایی رخ داد. دوباره امتحان کنید.", show_alert=True)
+        except Exception:
+            pass
+
+
 def main():
     init_db()
     _run_migrations()
@@ -232,6 +254,7 @@ def main():
     app.add_handler(CommandHandler("admin", admin_menu))
 
     app.add_handler(CallbackQueryHandler(main_callback))
+    app.add_error_handler(error_handler)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_router))
     app.add_handler(MessageHandler(filters.PHOTO | filters.Document.ALL, receipt_router))
 
