@@ -1,7 +1,17 @@
+import os
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, CopyTextButton
 from database.db import get_db
 from database.models import User
 from utils.i18n import t
+from config import VPN_CONFIG_FILE
+
+
+async def send_vpn_config(bot, chat_id: int):
+    """Send the .ovpn config file to the user after successful order activation."""
+    if not VPN_CONFIG_FILE or not os.path.exists(VPN_CONFIG_FILE):
+        return
+    with open(VPN_CONFIG_FILE, "rb") as f:
+        await bot.send_document(chat_id=chat_id, document=f, filename=os.path.basename(VPN_CONFIG_FILE))
 
 
 def credentials_keyboard(username: str, password: str, lang: str) -> InlineKeyboardMarkup:
