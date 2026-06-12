@@ -152,11 +152,6 @@ async def pay_trc20(update: Update, context: ContextTypes.DEFAULT_TYPE):
     renewal_info = context.user_data.pop("renewal_info", None)
     order_id, price, _ = _create_order(tg_user.id, plan_id, PaymentMethod.USDT_TRC20, renewal_info)
     since_ms = int(time.time() * 1000)
-    context.bot_data.setdefault("pending_trc20", {})[order_id] = {
-        "since_ms": since_ms,
-        "amount": price,
-        "telegram_id": tg_user.id,
-    }
     context.user_data["crypto_pending"] = {
         "method": "trc20",
         "order_id": order_id,
@@ -165,7 +160,6 @@ async def pay_trc20(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
 
     keyboard = [
-        [InlineKeyboardButton(t("btn_sent_check", lang), callback_data=f"check_trc20_{order_id}")],
         [InlineKeyboardButton(t("btn_cancel", lang), callback_data="plans")],
     ]
     await query.edit_message_text(
@@ -251,11 +245,6 @@ async def pay_erc20(update: Update, context: ContextTypes.DEFAULT_TYPE):
     renewal_info = context.user_data.pop("renewal_info", None)
     order_id, price, _ = _create_order(tg_user.id, plan_id, PaymentMethod.USDT_ERC20, renewal_info)
     since_ts = int(time.time())
-    context.bot_data.setdefault("pending_erc20", {})[order_id] = {
-        "since": since_ts,
-        "amount": price,
-        "telegram_id": tg_user.id,
-    }
     context.user_data["crypto_pending"] = {
         "method": "erc20",
         "order_id": order_id,
@@ -264,7 +253,6 @@ async def pay_erc20(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
 
     keyboard = [
-        [InlineKeyboardButton(t("btn_sent_check", lang), callback_data=f"check_erc20_{order_id}")],
         [InlineKeyboardButton(t("btn_cancel", lang), callback_data="plans")],
     ]
     await query.edit_message_text(
@@ -489,6 +477,13 @@ def _extract_tx_hash(text: str, method: str) -> str | None:
     return None
 
 
+def _crypto_retry_keyboard(lang: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(t("btn_retry_hash", lang), callback_data="retry_crypto")],
+        [InlineKeyboardButton(t("btn_cancel", lang), callback_data="cancel_crypto")],
+    ])
+
+
 async def receive_crypto_hash(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle TX hash submitted as a text message during a crypto payment flow."""
     lang = get_user_language(update.effective_user.id)
@@ -502,11 +497,17 @@ async def receive_crypto_hash(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     tx_hash = _extract_tx_hash(update.message.text or "", method)
     if not tx_hash:
-        await update.message.reply_text(t("invalid_tx_hash", lang))
+        await update.message.reply_text(
+            t("invalid_tx_hash", lang),
+            reply_markup=_crypto_retry_keyboard(lang),
+        )
         return
 
     if crypto_svc.is_tx_hash_used(tx_hash):
-        await update.message.reply_text(t("tx_already_used", lang))
+        await update.message.reply_text(
+            t("tx_already_used", lang),
+            reply_markup=_crypto_retry_keyboard(lang),
+        )
         return
 
     if method == "trc20":
@@ -515,7 +516,10 @@ async def receive_crypto_hash(update: Update, context: ContextTypes.DEFAULT_TYPE
         result = crypto_svc.verify_erc20_tx(tx_hash, amount, pending.get("since_ts", 0))
 
     if not result:
-        await update.message.reply_text(t("tx_not_found", lang))
+        await update.message.reply_text(
+            t("tx_not_found", lang),
+            reply_markup=_crypto_retry_keyboard(lang),
+        )
         return
 
     tx_hash, actual_amount = result
@@ -561,3 +565,29 @@ async def receive_crypto_hash(update: Update, context: ContextTypes.DEFAULT_TYPE
         reply_markup=credentials_keyboard(activated.vpn_username, activated.vpn_password, lang),
         parse_mode="Markdown",
     )
+
+
+async def retry_crypto(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Remind the user to paste their TX hash again."""
+    query = update.callback_query
+    await query.answer()
+    lang = get_user_language(update.effective_user.id)
+    pending = context.user_data.get("crypto_pending")
+    if not pending:
+        await query.edit_message_text(t("order_not_found", lang))
+        return
+    await query.edit_message_text(
+        t("retry_hash_prompt", lang),
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton(t("btn_cancel", lang), callback_data="cancel_crypto")],
+        ]),
+    )
+
+
+async def cancel_crypto(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Cancel pending crypto payment and return to plans."""
+    query = update.callback_query
+    await query.answer()
+    context.user_data.pop("crypto_pending", None)
+    from handlers.plans import show_plans
+    await show_plans(update, context)
