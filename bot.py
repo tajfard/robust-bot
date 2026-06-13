@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -6,7 +5,7 @@ from telegram.ext import (
     MessageHandler, ConversationHandler, filters,
 )
 
-from config import BOT_TOKEN
+from config import BOT_TOKEN, WEBHOOK_DOMAIN, WEBHOOK_PORT, WEBHOOK_SECRET
 from database.db import init_db, engine
 from handlers.start import start, help_command, choose_language_callback, set_language_callback, show_reviews
 from handlers.plans import show_plans, plan_detail, my_orders, order_detail, activate_test_plan
@@ -262,9 +261,15 @@ def main():
 
     app.job_queue.run_repeating(lambda ctx: check_and_expire_orders(), interval=600, first=30)
 
-    logger.info("Bot starting…")
-    asyncio.set_event_loop(asyncio.new_event_loop())
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    logger.info("Bot starting (webhook mode)…")
+    app.run_webhook(
+        listen="127.0.0.1",
+        port=WEBHOOK_PORT,
+        url_path=BOT_TOKEN,
+        webhook_url=f"https://{WEBHOOK_DOMAIN}/{BOT_TOKEN}",
+        secret_token=WEBHOOK_SECRET or None,
+        allowed_updates=Update.ALL_TYPES,
+    )
 
 
 if __name__ == "__main__":
