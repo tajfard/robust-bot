@@ -38,5 +38,10 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///vpn_bot.db")
 # Payment check interval in seconds (scheduler)
 CRYPTO_CHECK_INTERVAL = 60
 
+# Webhook
+WEBHOOK_DOMAIN = os.getenv("WEBHOOK_DOMAIN", "bot.robustvpn.host")
+WEBHOOK_PORT   = int(os.getenv("WEBHOOK_PORT", "8443"))
+WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "")   # random string, set in .env
+
 # Path to the OpenVPN config file sent to users after order activation
 VPN_CONFIG_FILE = os.getenv("VPN_CONFIG_FILE", "client_rorbustvpn_iran.ovpn")
